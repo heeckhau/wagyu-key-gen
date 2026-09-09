@@ -1,144 +1,77 @@
 # Wagyu Key Gen
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/stake-house/wagyu-key-gen/badge)](https://www.gitpoap.io/gh/stake-house/wagyu-key-gen)
 
-Wagyu Key Gen is a GUI application providing functionality to the [ethstaker-deposit-cli](https://github.com/eth-educators/ethstaker-deposit-cli). It is a React app running in Electron.  See `src/electron/` for the simple electron app and `src/react/` for where the magic happens.
+Wagyu Key Gen is a GUI application for creating Ethereum validator keys: it generates a Secret Recovery Phrase (mnemonic), EIP-2335 keystores and `deposit_data` files, and can produce BLS-to-execution-change files for an existing mnemonic. It writes exactly the same files as the [ethstaker-deposit-cli](https://github.com/eth-educators/ethstaker-deposit-cli).
+
+Since version 2.0 the application is a React UI running in [Tauri](https://tauri.app) with a Rust backend. All cryptography (BLS12-381, EIP-2333 key derivation, EIP-2335 keystores, BIP-39) comes from the [Lighthouse](https://github.com/sigp/lighthouse) crypto crates; see [docs/rust-tauri-migration-plan.md](docs/rust-tauri-migration-plan.md) for the design.
 
 ### Download wagyu at [https://wagyu.gg](https://wagyu.gg)
 
 ### Wagyu Audit by HashCloak [Wagyu Key Gen Audit Report](https://github.com/stake-house/wagyu-key-gen/files/7693548/Wagyu.Key.Gen.Audit.Report.pdf)
 
-## Environment Configuration & Dependencies
-Prior to running Wagyu Key Gen a few dependencies need to be installed. 
+The audit covered the Electron + Python implementation (versions 1.x). The Rust rewrite (2.x) reproduces the audited output byte for byte (see the golden fixtures under `crates/wagyu-core/tests/vectors/golden`) but has not itself been audited yet.
 
-### Ubuntu 20.04 and later
-Execute all those commands in your terminal to setup your dev environment.
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `crates/wagyu-core` | Rust library with all key handling: mnemonics, credentials, keystores, deposit data, BLS-to-execution changes. No UI dependencies, fully unit tested. |
+| `src-tauri` | The Tauri application: window, IPC commands, plugins, bundling configuration. |
+| `src` | The React + MUI + Tailwind user interface. `src/api` is the bridge to the Rust backend. |
+| `docs` | Design documents. |
+
+## Development setup
+
+You need:
+
+- [Rust](https://rustup.rs) stable (1.85 or newer; `rust-toolchain.toml` selects it automatically).
+- [Node.js](https://nodejs.org) 20 or newer with Corepack (`corepack enable`) for Yarn 4.
+- The Tauri platform prerequisites for your OS: https://v2.tauri.app/start/prerequisites/
+  - macOS: Xcode command line tools (`xcode-select --install`).
+  - Ubuntu / Debian: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf build-essential curl wget file libssl-dev`
+  - Windows: Microsoft C++ Build Tools and the WebView2 runtime (already present on Windows 11 and updated Windows 10).
+
+Then:
 
 ```console
-sudo apt install -y curl
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-
-sudo apt install -y build-essential nodejs git python3-distutils python3-dev
-
-PATH="$HOME/.local/bin:$PATH"
-
-curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python3 get-pip.py
-pip3 install pyinstaller
-
-sudo npm install -g yarn
-
 git clone https://github.com/stake-house/wagyu-key-gen
 cd wagyu-key-gen
-
+corepack enable
 yarn install
-yarn buildcli
-```
-
-### Ubuntu 18.04
-Even if Ubuntu 18.04 is somewhat old, it is a great OS to build our releases on for the Linux target because it has an older GLIBC which makes it more compatible. More details [here](https://pyinstaller.readthedocs.io/en/stable/usage.html#making-gnu-linux-apps-forward-compatible).
-
-Execute all those commands in your terminal to build a distribution for release.
-```console
-sudo apt update && sudo apt -y upgrade
-
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt install -y curl
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-
-sudo apt install -y python3.10-dev python3.10-distutils zlib1g-dev build-essential nodejs git
-
-PATH="$HOME/.local/bin:$PATH"
-
-curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-alias python3=python3.10
-echo -e "\nalias python3=python3.10" >> ~/.bash_aliases
-python3 get-pip.py
-pip3 install pyinstaller
-
-sudo corepack enable
-
-git clone https://github.com/stake-house/wagyu-key-gen
-cd wagyu-key-gen
-
-yarn install
-yarn build
-yarn buildcli
-yarn dist
-```
-
-### Windows 10
-- Download and install Node.js and npm from https://nodejs.org/en/download/ (Use LTS version and 64-bit .msi Installer).
-  - At the screen named *Tools for Native Modules*, make sure to check the option named *Automatically install the necessary tools.*. It will install chocolatey, Python 3 and VS build tools. Follow the instructions until the end.
-- Open a command prompt window as admin (Press `⊞ Win`+`R`, type `cmd`, hold `Ctrl` + `Shift` and press `↵ Enter`)
-  -  Execute this command to install git. Follow the instructions on screen.
-```console
-choco install git.install
-```
-- Open a normal command prompt window (Press `⊞ Win`+`R`, type `cmd` and press `↵ Enter`).
-  - Execute those commands to upgrade pip, install pyinstaller, Cython, install yarn, clone the repository and install the required packages.
-```console
-python -m pip install --upgrade --user pip
-python -m pip install --user pyinstaller
-python -m pip install --user Cython
-set PATH=%APPDATA%\python\Python310\Scripts;%PATH%
-
-npm install -g yarn
-
-git clone https://github.com/stake-house/wagyu-key-gen
-cd wagyu-key-gen
-
-yarn install
-yarn buildcliwin
-```
-
-### macOS 10.15.1 and later
-Execute all those commands in your terminal to setup your dev environment.  You may be prompted to install "command line developer tools" at some point and please do it.
-
-```console
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$USER/.zprofile
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
-git --version
-
-// If git is not found, run the following
-brew install git
-
-python3 --version
-pip3 --version
-
-// If either python3 or pip3 are not found, run the following
-brew install python3
-
-brew install node
-pip3 install pyinstaller
-npm install -g yarn
-
-git clone https://github.com/stake-house/wagyu-key-gen
-cd wagyu-key-gen
-
-yarn install
-yarn buildcli
 ```
 
 ## Start Wagyu Key Gen
-Run the following commands in the repository directory:
 
- - `yarn build`
-   - `yarn build:watch` (will reload build on changes)
-   - _In order to get them to show in the app press `ctrl+r` or `cmd+r` once the app is started._
- - `yarn start`
+```console
+yarn tauri dev
+```
 
-## To run diagnostics
-To open dev tools when in Wagyu Key Gen use `Ctrl` + `Shift` + `I`
+This starts Vite for the UI with hot reload and compiles the Rust backend. The first compile takes a few minutes (Lighthouse and Tauri are large); later ones are incremental.
+
+To open the web inspector in a dev build use `Ctrl` + `Shift` + `I` (`Cmd` + `Option` + `I` on macOS). Release builds have the inspector disabled.
+
+## Tests
+
+```console
+cargo test --workspace   # Rust: BIP-39 / EIP-2333 / EIP-2335 vectors, deposit and BTEC generation, parity with the Python deposit-cli output
+yarn test                # UI unit tests (Vitest)
+```
 
 ## Bundling
-We use [electron-builder](https://www.electron.build/) to create executable bundles for Wagyu Key Gen.  Run the following to create a bundle:
- - `yarn run build`
- - `yarn run buildcli` (or `yarn run buildcliwin` on Windows)
- - `yarn run dist`
 
-Your assets will be in the `dist/` folder.
+```console
+yarn tauri build
+```
+
+On x86_64 machines add `--features portable` so the BLS backend does not require ADX instructions (older CPUs would otherwise crash):
+
+```console
+yarn tauri build --features portable
+```
+
+The installers land in `target/release/bundle/` (`dmg/` on macOS, `appimage/` on Linux, `nsis/` on Windows). On Windows `target/release/wagyu-key-gen.exe` is also usable as a portable executable on machines that already have the WebView2 runtime.
+
+Release binaries are produced by the `ci-build` GitHub workflow (`.github/workflows/build.yml`).
 
 ## Design
 Current designs: https://www.figma.com/file/jcF78fVjndvM2hOPvifl0N/Wagyu-Key?node-id=1%3A4
