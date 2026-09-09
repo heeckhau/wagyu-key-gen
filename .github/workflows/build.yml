@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: corepack enable
+          cache: 'npm'
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install Linux dependencies
@@ -44,15 +44,15 @@ jobs:
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c -7)
           echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
-      - run: yarn install --immutable
+      - run: npm ci
       - name: Test
         shell: bash
         run: |
-          yarn test
+          npm test
           cargo test -p wagyu-core ${{ matrix.build_args }}
       - name: Build
         shell: bash
-        run: yarn tauri build ${{ matrix.build_args }}
+        run: npm run tauri build -- ${{ matrix.build_args }}
       - name: Collect artifacts
         shell: bash
         run: |

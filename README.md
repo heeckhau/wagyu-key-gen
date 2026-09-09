@@ -25,7 +25,7 @@ The audit covered the Electron + Python implementation (versions 1.x). The Rust 
 You need:
 
 - [Rust](https://rustup.rs) stable (1.85 or newer; `rust-toolchain.toml` selects it automatically).
-- [Node.js](https://nodejs.org) 20 or newer with Corepack (`corepack enable`) for Yarn 4.
+- [Node.js](https://nodejs.org) 20 or newer (npm ships with it).
 - The Tauri platform prerequisites for your OS: https://v2.tauri.app/start/prerequisites/
   - macOS: Xcode command line tools (`xcode-select --install`).
   - Ubuntu / Debian: `sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf build-essential curl wget file libssl-dev`
@@ -36,14 +36,13 @@ Then:
 ```console
 git clone https://github.com/stake-house/wagyu-key-gen
 cd wagyu-key-gen
-corepack enable
-yarn install
+npm install
 ```
 
 ## Start Wagyu Key Gen
 
 ```console
-yarn tauri dev
+npm run tauri dev
 ```
 
 This starts Vite for the UI with hot reload and compiles the Rust backend. The first compile takes a few minutes (Lighthouse and Tauri are large); later ones are incremental.
@@ -54,19 +53,19 @@ To open the web inspector in a dev build use `Ctrl` + `Shift` + `I` (`Cmd` + `Op
 
 ```console
 cargo test --workspace   # Rust: BIP-39 / EIP-2333 / EIP-2335 vectors, deposit and BTEC generation, parity with the Python deposit-cli output
-yarn test                # UI unit tests (Vitest)
+npm test                 # UI unit tests (Vitest)
 ```
 
 ## Bundling
 
 ```console
-yarn tauri build
+npm run tauri build
 ```
 
 On x86_64 machines add `--features portable` so the BLS backend does not require ADX instructions (older CPUs would otherwise crash):
 
 ```console
-yarn tauri build --features portable
+npm run tauri build -- --features portable
 ```
 
 The installers land in `target/release/bundle/` (`dmg/` on macOS, `appimage/` on Linux, `nsis/` on Windows). On Windows `target/release/wagyu-key-gen.exe` is also usable as a portable executable on machines that already have the WebView2 runtime.

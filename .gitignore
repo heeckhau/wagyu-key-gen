@@ -2,13 +2,6 @@
 .venv/
 node_modules/
 dist/
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
 
 
 # Rust / Tauri / Vite

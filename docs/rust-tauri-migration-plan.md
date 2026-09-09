@@ -530,4 +530,10 @@ Estimates are rough working days for one engineer familiar with Rust.
   `crates/wagyu-core/tests/vectors/golden`. Deposit data and BTEC files compare equal as parsed
   JSON; keystores compare by pubkey, path and decrypted secret.
 - CI: `ci.yml` (fmt, clippy, tests on three OSes, frontend tests and build) is new; `build.yml`
-  now runs `yarn tauri build` and ships the NSIS installer plus the bare exe for Windows.
+  now runs the Tauri CLI and ships the NSIS installer plus the bare exe for Windows.
+- Package manager: switched from Yarn 4 (the project's prior choice) to npm. The frontend used
+  none of Yarn Berry's differentiating features here (no workspaces, `nodeLinker: node-modules`
+  so no Plug'n'Play, no plugins), so it added config and a vendored binary
+  (`.yarn/releases/*.cjs`) for no benefit over npm, which every contributor already has. `yarn
+  <cmd>` becomes `npm run <cmd>`; passing flags through the `tauri` script needs `--`, e.g.
+  `npm run tauri build -- --features portable`.
