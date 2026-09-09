@@ -1,0 +1,11 @@
+{
+  "command": "generate_keys",
+  "mnemonic": "sister protect peanut hill ready work profit fit wish want small inflict flip member tail between sick setup bright duck morning sell paper worry",
+  "index": 0,
+  "amount_gwei": 32000000000,
+  "count": 2,
+  "network": "mainnet",
+  "password": "MyPasswordIs",
+  "eth1_withdrawal_address": null,
+  "compounding": false
+}

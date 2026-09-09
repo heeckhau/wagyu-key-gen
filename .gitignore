@@ -10,7 +10,9 @@ dist/
 !.yarn/sdks
 !.yarn/versions
 
-# For pyinstaller
-build/
-src/scripts/__pycache__/
-src/vendors/*.pyc
+
+# Rust / Tauri / Vite
+/target/
+/crates/*/target/
+/src-tauri/target/
+/src-tauri/gen/schemas/

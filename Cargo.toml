@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = ["crates/wagyu-core", "src-tauri"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"
+license = "GPL-3.0"
+repository = "https://github.com/stake-house/wagyu-key-gen"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+
+# scrypt with n=2^18 is unusably slow unoptimised; keep the KDF crates fast in debug/test builds.
+[profile.dev.package.scrypt]
+opt-level = 3
+[profile.dev.package.salsa20]
+opt-level = 3
+[profile.dev.package.pbkdf2]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.hmac]
+opt-level = 3

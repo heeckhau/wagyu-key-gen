@@ -1,0 +1,9 @@
+{
+  "command": "bls_change",
+  "network": "gnosis",
+  "mnemonic": "sister protect peanut hill ready work profit fit wish want small inflict flip member tail between sick setup bright duck morning sell paper worry",
+  "index": 0,
+  "indices": "1,2",
+  "withdrawal_credentials": "0x00bd0b5a34de5fb17df08410b5e615dda87caf4fb72d0aac91ce5e52fc6aa8de,0x00a75d83f169fa6923f3dd78386d9608fab710d8f7fcf71ba9985893675d5382",
+  "execution_address": "0x3434343434343434343434343434343434343434"
+}

@@ -1,0 +1,11 @@
+{
+  "command": "generate_keys",
+  "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  "index": 0,
+  "amount_gwei": 32000000000,
+  "count": 1,
+  "network": "chiado",
+  "password": "MyPasswordIs",
+  "eth1_withdrawal_address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+  "compounding": true
+}
