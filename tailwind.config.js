@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   prefix: "tw-",
-  content: ['./src/react/**/*.{ts,tsx,html}'],
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     colors: {
       cyan: "cyan",
