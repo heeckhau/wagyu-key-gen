@@ -537,3 +537,11 @@ Estimates are rough working days for one engineer familiar with Rust.
   (`.yarn/releases/*.cjs`) for no benefit over npm, which every contributor already has. `yarn
   <cmd>` becomes `npm run <cmd>`; passing flags through the `tauri` script needs `--`, e.g.
   `npm run tauri build -- --features portable`.
+- Clipboard clear on quit fires on `RunEvent::ExitRequested`, not `RunEvent::Exit` as section 5.2
+  originally said. `tauri-plugin-clipboard-manager` registers its own `RunEvent::Exit` handler
+  that takes and drops its `arboard::Clipboard` (arboard requires that drop to flush a write to
+  the OS clipboard), and Tauri runs a plugin's `on_event` before the app's own `.run` callback for
+  the same event — so clearing at `Exit` found the clipboard already taken and panicked silently,
+  clearing nothing. No automated test: `arboard::Clipboard::new()` needs a real OS clipboard and
+  display session, which GitHub's Linux CI runner doesn't have, so a test exercising this would be
+  flaky on exactly the platform most likely to hide the regression again. Verify by hand.

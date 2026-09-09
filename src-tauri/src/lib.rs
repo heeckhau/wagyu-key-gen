@@ -43,9 +43,17 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building the Wagyu Key Gen application")
         .run(|app, event| {
-            // Clear the clipboard on quit so a copied mnemonic or password does not outlive the app.
-            if let RunEvent::Exit = event {
-                let _ = app.clipboard().clear();
+            // Clear the clipboard on quit so a copied mnemonic or password does not outlive the
+            // app. This must happen on `ExitRequested`, not `Exit`: the clipboard-manager
+            // plugin's own internal `RunEvent::Exit` handler takes and drops its
+            // `arboard::Clipboard` right before ours would run (arboard requires that drop to
+            // flush a write to the OS clipboard, and Tauri runs a plugin's `on_event` before the
+            // app's own `.run` callback for the same event). Clearing here at `Exit` finds the
+            // clipboard already taken and panics silently, so nothing gets cleared.
+            if let RunEvent::ExitRequested { .. } = event {
+                if let Err(err) = app.clipboard().clear() {
+                    eprintln!("failed to clear the clipboard on exit: {err}");
+                }
             }
         });
 }
