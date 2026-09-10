@@ -34,6 +34,16 @@ export const electronAPI = {
     return typeof selected === "string" ? selected : null;
   },
 
+  /** Opens the native file picker for a keystore. Resolves to the chosen file or `null`. */
+  invokeShowOpenKeystoreDialog: async (): Promise<string | null> => {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      filters: [{ name: "Keystore", extensions: ["json"] }],
+    });
+    return typeof selected === "string" ? selected : null;
+  },
+
   /** Quits the application (the backend clears the clipboard on exit). */
   ipcRendererSendClose: (): Promise<void> => invoke("quit"),
 
@@ -100,6 +110,72 @@ export const eth2Deposit = {
       withdrawalCredentials,
       executionAddress,
     }),
+
+  /**
+   * Writes a BLS-to-execution change signed with the signing key in a keystore file (the
+   * deposit-cli's `generate-bls-to-execution-change-keystore`) and resolves to its path.
+   */
+  generateBLSChangeKeystore: (
+    folder: string,
+    chain: string,
+    keystore: string,
+    keystorePassword: string,
+    validatorIndex: number,
+    withdrawalAddress: string,
+  ): Promise<string> =>
+    invoke("generate_bls_change_keystore", {
+      request: { folder, chain, keystore, keystorePassword, validatorIndex, withdrawalAddress },
+    }),
+
+  /**
+   * Writes one signed voluntary exit per validator, signed with the keys derived from the
+   * mnemonic at `index`, `index + 1`, ... Resolves to the file paths in validator order.
+   */
+  generateExitTransactions: (
+    folder: string,
+    chain: string,
+    mnemonic: string,
+    index: number,
+    indices: string,
+    epoch: number,
+  ): Promise<string[]> =>
+    invoke("generate_exit_transactions", {
+      request: { folder, chain, mnemonic, index, indices, epoch },
+    }),
+
+  /** Writes a signed voluntary exit using the key in a keystore file. Resolves to its path. */
+  generateExitTransactionKeystore: (
+    folder: string,
+    chain: string,
+    keystore: string,
+    keystorePassword: string,
+    validatorIndex: number,
+    epoch: number,
+  ): Promise<string> =>
+    invoke("generate_exit_transaction_keystore", {
+      request: { folder, chain, keystore, keystorePassword, validatorIndex, epoch },
+    }),
+
+  /**
+   * Writes a single-entry deposit data file that tops up the validator in the keystore.
+   *
+   * @param amount Deposit as typed by the user, in ETH (or GNO on Gnosis chains).
+   */
+  generatePartialDeposit: (
+    folder: string,
+    chain: string,
+    keystore: string,
+    keystorePassword: string,
+    amount: string,
+    withdrawalAddress: string,
+    compounding: boolean,
+  ): Promise<string> =>
+    invoke("generate_partial_deposit", {
+      request: { folder, chain, keystore, keystorePassword, amount, withdrawalAddress, compounding },
+    }),
+
+  /** The hex public key stored in a keystore file. Rejects if the file is not a keystore. */
+  keystorePubkey: (path: string): Promise<string> => invoke("keystore_pubkey", { path }),
 };
 
 export const bashUtils = {
