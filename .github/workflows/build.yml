@@ -49,10 +49,12 @@ jobs:
         shell: bash
         run: |
           npm test
-          cargo test -p wagyu-core ${{ matrix.build_args }}
+          cargo test -p wagyu-core -p wagyu-cli ${{ matrix.build_args }}
       - name: Build
         shell: bash
-        run: npm run tauri build -- ${{ matrix.build_args }}
+        run: |
+          npm run tauri build -- ${{ matrix.build_args }}
+          cargo build --release -p wagyu-cli ${{ matrix.build_args }}
       - name: Collect artifacts
         shell: bash
         run: |
@@ -68,15 +70,23 @@ jobs:
             mv "$file" "output/artifacts/${name}"
             echo "collected ${name}"
           }
+          VERSION=$(node -p "require('./package.json').version")
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             for f in target/release/bundle/nsis/*-setup.exe; do collect "$f"; done
-            VERSION=$(node -p "require('./package.json').version")
             cp target/release/wagyu-key-gen.exe "output/artifacts/Wagyu.Key.Gen_${VERSION}-${SHORT_SHA}_x64-portable.exe"
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
             for f in target/release/bundle/dmg/*.dmg; do collect "$f"; done
           else
             for f in target/release/bundle/appimage/*.AppImage; do collect "$f"; done
           fi
+          # The CLI is shipped as a tarball so the release script's installer table ignores it.
+          case "$RUNNER_OS-$(uname -m)" in
+            Windows-*) CLI_PLATFORM=windows_x64; CLI_BIN=wagyu-cli.exe ;;
+            macOS-arm64) CLI_PLATFORM=macos_aarch64; CLI_BIN=wagyu-cli ;;
+            macOS-*) CLI_PLATFORM=macos_x64; CLI_BIN=wagyu-cli ;;
+            *) CLI_PLATFORM=linux_x64; CLI_BIN=wagyu-cli ;;
+          esac
+          tar -czf "output/artifacts/wagyu-cli_${VERSION}-${SHORT_SHA}_${CLI_PLATFORM}.tar.gz" -C target/release "$CLI_BIN"
           cd output/artifacts
           for f in *; do
             if [[ "$RUNNER_OS" == "Windows" ]]; then
