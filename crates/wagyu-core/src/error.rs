@@ -62,6 +62,15 @@ pub enum Error {
     #[error("Failed to verify the BLS to execution change JSON file.")]
     BtecVerification,
 
+    #[error("Failed to verify the exit transaction JSON file.")]
+    ExitVerification,
+
+    #[error("The keystore password is incorrect.")]
+    WrongKeystorePassword,
+
+    #[error("{0} is not a valid keystore file.")]
+    InvalidKeystoreFile(PathBuf),
+
     #[error("Keystore error: {0:?}")]
     Keystore(eth2_keystore::Error),
 

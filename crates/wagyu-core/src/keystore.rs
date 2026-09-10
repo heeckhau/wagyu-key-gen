@@ -8,7 +8,7 @@ use eth2_keystore::json_keystore::{Crypto, JsonKeystore, Kdf, Pbkdf2, Prf};
 use eth2_keystore::{Keystore, KeystoreBuilder, DKLEN, SALT_SIZE};
 use serde::{Deserialize, Serialize};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::fs::write_sensitive_json;
 
 /// Which key derivation function protects the keystore. `Scrypt` is the deposit-cli default.
@@ -50,6 +50,24 @@ pub fn encrypt_keystore(
 /// Decrypts a keystore, verifying that the recovered public key matches the file.
 pub fn decrypt_keystore(keystore: &Keystore, password: &[u8]) -> Result<Keypair> {
     Ok(keystore.decrypt_keypair(password)?)
+}
+
+/// Reads and decrypts a keystore file chosen by the user, turning the two failures they can fix
+/// (not a keystore, wrong password) into their own errors.
+pub fn decrypt_keystore_file(path: &Path, password: &[u8]) -> Result<Keypair> {
+    let keystore =
+        read_keystore_file(path).map_err(|_| Error::InvalidKeystoreFile(path.to_path_buf()))?;
+    keystore.decrypt_keypair(password).map_err(|e| match e {
+        eth2_keystore::Error::InvalidPassword => Error::WrongKeystorePassword,
+        other => Error::Keystore(other),
+    })
+}
+
+/// The hex public key stored in a keystore file, without decrypting it.
+pub fn keystore_file_pubkey(path: &Path) -> Result<String> {
+    read_keystore_file(path)
+        .map(|k| k.pubkey().to_string())
+        .map_err(|_| Error::InvalidKeystoreFile(path.to_path_buf()))
 }
 
 /// The deposit-cli file name: `keystore-m_12381_3600_<i>_0_0-<timestamp>.json`.

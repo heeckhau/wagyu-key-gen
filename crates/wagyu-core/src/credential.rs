@@ -13,6 +13,7 @@ use crate::keystore::{decrypt_keystore, encrypt_keystore, KdfChoice};
 use crate::spec::{
     compute_bls_to_execution_change_domain, compute_deposit_domain, compute_signing_root,
     BlsToExecutionChange, DepositData, DepositMessage, SignedBlsToExecutionChange,
+    SignedVoluntaryExit,
 };
 use crate::validation::{
     BLS_WITHDRAWAL_PREFIX, COMPOUNDING_WITHDRAWAL_PREFIX, EXECUTION_ADDRESS_WITHDRAWAL_PREFIX,
@@ -148,17 +149,15 @@ impl Credential {
     pub fn deposit_datum(&self) -> Result<DepositDatum> {
         let message = self.deposit_message()?;
         let signed = self.signed_deposit()?;
-        Ok(DepositDatum {
-            pubkey: hex::encode(signed.pubkey.serialize()),
-            withdrawal_credentials: hex::encode(signed.withdrawal_credentials),
-            amount: signed.amount,
-            signature: hex::encode(signed.signature.serialize()),
-            deposit_message_root: hex::encode(message.tree_hash_root()),
-            deposit_data_root: hex::encode(signed.tree_hash_root()),
-            fork_version: hex::encode(self.chain.genesis_fork_version),
-            network_name: self.chain.network_name.to_string(),
-            deposit_cli_version: DEPOSIT_CLI_VERSION.to_string(),
-        })
+        Ok(deposit_datum(&message, &signed, self.chain))
+    }
+
+    pub fn signed_voluntary_exit(
+        &self,
+        validator_index: u64,
+        epoch: u64,
+    ) -> Result<SignedVoluntaryExit> {
+        crate::exit::sign_voluntary_exit(&self.signing.sk, self.chain, validator_index, epoch)
     }
 
     pub fn signing_keystore(&self, password: &[u8], kdf: KdfChoice) -> Result<Keystore> {
@@ -223,6 +222,25 @@ impl Credential {
                 deposit_cli_version: DEPOSIT_CLI_VERSION.to_string(),
             },
         })
+    }
+}
+
+/// Lays out a signed deposit as one `deposit_data-*.json` entry.
+pub fn deposit_datum(
+    message: &DepositMessage,
+    signed: &DepositData,
+    chain: &ChainSetting,
+) -> DepositDatum {
+    DepositDatum {
+        pubkey: hex::encode(signed.pubkey.serialize()),
+        withdrawal_credentials: hex::encode(signed.withdrawal_credentials),
+        amount: signed.amount,
+        signature: hex::encode(signed.signature.serialize()),
+        deposit_message_root: hex::encode(message.tree_hash_root()),
+        deposit_data_root: hex::encode(signed.tree_hash_root()),
+        fork_version: hex::encode(chain.genesis_fork_version),
+        network_name: chain.network_name.to_string(),
+        deposit_cli_version: DEPOSIT_CLI_VERSION.to_string(),
     }
 }
 

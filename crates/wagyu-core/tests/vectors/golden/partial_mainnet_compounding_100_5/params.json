@@ -1,0 +1,9 @@
+{
+  "command": "partial_deposit",
+  "network": "mainnet",
+  "keystore": "keystore.json",
+  "password": "MyPasswordIs",
+  "amount_gwei": 100500000000,
+  "withdrawal_address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+  "compounding": true
+}

@@ -15,6 +15,9 @@ pub const DOMAIN_DEPOSIT: u32 = 3;
 pub const DOMAIN_VOLUNTARY_EXIT: u32 = 4;
 /// `DOMAIN_BLS_TO_EXECUTION_CHANGE` (`0x0A000000`).
 pub const DOMAIN_BLS_TO_EXECUTION_CHANGE: u32 = 10;
+/// `DOMAIN_BLS_TO_EXECUTION_CHANGE_KEYSTORE` (`0x0F000000`), the deposit-cli's own domain for a
+/// BLS-to-execution change signed with the validator's signing key instead of its withdrawal key.
+pub const DOMAIN_BLS_TO_EXECUTION_CHANGE_KEYSTORE: u32 = 15;
 
 /// <https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#depositmessage>
 #[derive(Debug, Clone, PartialEq, TreeHash)]
@@ -48,11 +51,32 @@ pub struct SignedBlsToExecutionChange {
     pub signature: SignatureBytes,
 }
 
+/// `BLSToExecutionChangeKeystore` from `ethstaker_deposit/utils/ssz.py`: not a consensus-spec
+/// container, but the message the deposit-cli signs with a keystore's signing key.
+#[derive(Debug, Clone, PartialEq, TreeHash)]
+pub struct BlsToExecutionChangeKeystore {
+    pub validator_index: u64,
+    pub to_execution_address: Address,
+}
+
+#[derive(Debug, Clone, PartialEq, TreeHash)]
+pub struct SignedBlsToExecutionChangeKeystore {
+    pub message: BlsToExecutionChangeKeystore,
+    pub signature: SignatureBytes,
+}
+
 /// <https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#voluntaryexit>
 #[derive(Debug, Clone, PartialEq, TreeHash)]
 pub struct VoluntaryExit {
     pub epoch: u64,
     pub validator_index: u64,
+}
+
+/// <https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signedvoluntaryexit>
+#[derive(Debug, Clone, PartialEq, TreeHash)]
+pub struct SignedVoluntaryExit {
+    pub message: VoluntaryExit,
+    pub signature: SignatureBytes,
 }
 
 /// <https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#signingdata>
@@ -111,6 +135,17 @@ pub fn compute_bls_to_execution_change_domain(
 ) -> Hash256 {
     compute_domain(
         DOMAIN_BLS_TO_EXECUTION_CHANGE,
+        fork_version,
+        genesis_validators_root,
+    )
+}
+
+pub fn compute_bls_to_execution_change_keystore_domain(
+    fork_version: [u8; 4],
+    genesis_validators_root: Hash256,
+) -> Hash256 {
+    compute_domain(
+        DOMAIN_BLS_TO_EXECUTION_CHANGE_KEYSTORE,
         fork_version,
         genesis_validators_root,
     )

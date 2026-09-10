@@ -1,0 +1,8 @@
+{
+  "command": "exit_transaction_keystore",
+  "network": "gnosis",
+  "keystore": "keystore.json",
+  "password": "MyPasswordIs",
+  "validator_index": 7,
+  "epoch": 5
+}
