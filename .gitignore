@@ -9,3 +9,6 @@ dist/
 /crates/*/target/
 /src-tauri/target/
 /src-tauri/gen/schemas/
+
+# Personal working notes, not for the repo
+TODO.md

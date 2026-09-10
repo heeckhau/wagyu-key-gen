@@ -3,7 +3,7 @@
 
 Wagyu Key Gen is a GUI application for creating Ethereum validator keys: it generates a Secret Recovery Phrase (mnemonic), EIP-2335 keystores and `deposit_data` files, and can produce BLS-to-execution-change files for an existing mnemonic. It writes exactly the same files as the [ethstaker-deposit-cli](https://github.com/eth-educators/ethstaker-deposit-cli).
 
-Since version 2.0 the application is a React UI running in [Tauri](https://tauri.app) with a Rust backend. All cryptography (BLS12-381, EIP-2333 key derivation, EIP-2335 keystores, BIP-39) comes from the [Lighthouse](https://github.com/sigp/lighthouse) crypto crates; see [docs/rust-tauri-migration-plan.md](docs/rust-tauri-migration-plan.md) for the design.
+Since version 2.0 the application is a React UI running in [Tauri](https://tauri.app) with a Rust backend. All cryptography (BLS12-381, EIP-2333 key derivation, EIP-2335 keystores, BIP-39) comes from the [Lighthouse](https://github.com/sigp/lighthouse) crypto crates.
 
 ### Download wagyu at [https://wagyu.gg](https://wagyu.gg)
 
