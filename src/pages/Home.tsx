@@ -1,13 +1,17 @@
 import { Button, Tooltip, Typography } from "@mui/material";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useHistory } from "react-router-dom";
 
 import { paths, tooltips } from "../constants";
 import { GlobalContext } from "../GlobalContext";
 import { KeyIcon } from "../icons/KeyIcon";
+import KeystoreActionModal from "../modals/KeystoreActionModal";
 import NetworkPickerModal from "../modals/NetworkPickerModal";
 import ReuseMnemonicActionModal from "../modals/ReuseMnemonicActionModal";
-import { ReuseMnemonicAction } from "../types";
+import { KeystoreAction, ReuseMnemonicAction } from "../types";
+
+/** The three entry points of the app; each first asks for the network. */
+type HomeAction = "createMnemonic" | "useExistingMnemonic" | "useKeystore";
 
 /**
  * Landed page of the application.
@@ -19,8 +23,8 @@ const Home = () => {
   const [wasNetworkModalOpened, setWasNetworkModalOpened] = useState(false);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
   const [showReuseMnemonicModal, setShowReuseMnemonicModal] = useState(false);
-  const [createMnemonicSelected, setCreateMnemonicSelected] = useState(false);
-  const [useExistingMnemonicSelected, setUseExistingMnemonicSelected] = useState(false);
+  const [showKeystoreModal, setShowKeystoreModal] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<HomeAction | null>(null);
 
   let history = useHistory();
 
@@ -31,47 +35,50 @@ const Home = () => {
     setWasNetworkModalOpened(true);
   };
 
+  /**
+   * Starts the action once the network is known, asking for the network first if it
+   * has not been chosen yet.
+   */
+  const startAction = (action: HomeAction) => {
+    setSelectedAction(action);
+
+    if (!wasNetworkModalOpened) {
+      handleOpenNetworkModal();
+    } else if (action === "createMnemonic") {
+      history.push(paths.CREATE_MNEMONIC);
+    } else if (action === "useExistingMnemonic") {
+      setShowReuseMnemonicModal(true);
+    } else {
+      setShowKeystoreModal(true);
+    }
+  };
+
   const handleCloseNetworkModal = () => {
     setShowNetworkModal(false);
-    if (createMnemonicSelected) {
-      handleCreateNewMnemonic();
-    } else if (useExistingMnemonicSelected) {
-      handleUseExistingMnemonic();
+    if (selectedAction) {
+      startAction(selectedAction);
     }
-  };
-
-  const handleCreateNewMnemonic = () => {
-    setCreateMnemonicSelected(true);
-
-    if (!wasNetworkModalOpened) {
-      handleOpenNetworkModal();
-    } else {
-      history.push(paths.CREATE_MNEMONIC)
-    }
-  };
-
-  const handleUseExistingMnemonic = () => {
-    setUseExistingMnemonicSelected(true);
-
-    if (!wasNetworkModalOpened) {
-      handleOpenNetworkModal();
-    } else {
-      setShowReuseMnemonicModal(true);
-    }
-  };
-
-  const handleCloseReuseActionModal = () => {
-    setShowReuseMnemonicModal(false);
   };
 
   const handleReuseMnemonicActionSubmit = (action: ReuseMnemonicAction) => {
     setShowReuseMnemonicModal(false);
     if (action === ReuseMnemonicAction.RegenerateKeys) {
-
       history.push(paths.EXISTING_IMPORT);
     } else if (action === ReuseMnemonicAction.GenerateBLSToExecutionChange) {
-
       history.push(paths.BTEC_IMPORT);
+    } else if (action === ReuseMnemonicAction.GenerateExitTransaction) {
+      history.push(paths.EXIT_IMPORT);
+    }
+  };
+
+  const handleKeystoreActionSubmit = (action: KeystoreAction) => {
+    setShowKeystoreModal(false);
+    if (action === KeystoreAction.GenerateExitTransaction) {
+      history.push(paths.CONFIGURE_EXIT_KEYSTORE);
+    } else if (action === KeystoreAction.GeneratePartialDeposit) {
+      history.push(paths.CONFIGURE_PARTIAL_DEPOSIT);
+    } else if (action === KeystoreAction.GenerateBLSToExecutionChange) {
+      history.push(paths.CONFIGURE_BTEC_KEYSTORE);
     }
   };
 
@@ -117,7 +124,7 @@ const Home = () => {
           variant="contained"
           color="primary"
           className="tw-mt-5"
-          onClick={handleCreateNewMnemonic}
+          onClick={() => startAction("createMnemonic")}
           tabIndex={tabIndex}
         >
           Create New Secret Recovery Phrase
@@ -127,10 +134,21 @@ const Home = () => {
           <Button
             className="tw-text-gray tw-mt-2"
             size="small"
-            onClick={handleUseExistingMnemonic}
+            onClick={() => startAction("useExistingMnemonic")}
             tabIndex={tabIndex}
           >
             Use Existing Secret Recovery Phrase
+          </Button>
+        </Tooltip>
+
+        <Tooltip title={tooltips.USE_KEYSTORE}>
+          <Button
+            className="tw-text-gray"
+            size="small"
+            onClick={() => startAction("useKeystore")}
+            tabIndex={tabIndex}
+          >
+            Use Existing Keystore File
           </Button>
         </Tooltip>
       </div>
@@ -141,9 +159,15 @@ const Home = () => {
       />
 
       <ReuseMnemonicActionModal
-        onClose={handleCloseReuseActionModal}
+        onClose={() => setShowReuseMnemonicModal(false)}
         onSubmit={handleReuseMnemonicActionSubmit}
         showModal={showReuseMnemonicModal}
+      />
+
+      <KeystoreActionModal
+        onClose={() => setShowKeystoreModal(false)}
+        onSubmit={handleKeystoreActionSubmit}
+        showModal={showKeystoreModal}
       />
     </div>
   )

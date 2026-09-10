@@ -28,6 +28,8 @@ function renderPage(overrides: Record<string, unknown> = {}) {
     setWithdrawalAddress: vi.fn(),
   };
   const value = {
+    source: "mnemonic" as const,
+    setSource: () => {},
     btecCredentials: "",
     setBTECCredentials: spies.setBTECCredentials,
     btecIndices: "",
@@ -40,6 +42,12 @@ function renderPage(overrides: Record<string, unknown> = {}) {
     setMnemonic: () => {},
     withdrawalAddress: "",
     setWithdrawalAddress: spies.setWithdrawalAddress,
+    keystorePath: "",
+    setKeystorePath: () => {},
+    keystorePassword: "",
+    setKeystorePassword: () => {},
+    validatorIndex: 0,
+    setValidatorIndex: () => {},
     ...overrides,
   };
 

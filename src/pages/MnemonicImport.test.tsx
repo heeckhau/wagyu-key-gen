@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { eth2Deposit } from "../api";
 import BTECContextWrapper from "../BTECContext";
 import { errors, paths } from "../constants";
+import ExitContextWrapper from "../ExitContext";
 import KeyCreationContextWrapper from "../KeyCreationContext";
 import MnemonicImport from "./MnemonicImport";
 
@@ -59,6 +60,20 @@ describe("MnemonicImport", () => {
     renderPage();
     typeMnemonic(ABANDON);
     expect(await screen.findByText(errors.INVALID_MNEMONIC_ERROR)).toBeInTheDocument();
+  });
+
+  it("moves on to the exit configuration when started from the exit flow", async () => {
+    validateMnemonic.mockResolvedValue(ABANDON);
+    render(
+      <MemoryRouter initialEntries={[paths.EXIT_IMPORT]}>
+        <ExitContextWrapper>
+          <Route path={paths.EXIT_IMPORT} component={MnemonicImport} />
+          <Route path={paths.CONFIGURE_EXIT} render={() => <div>configure exit page</div>} />
+        </ExitContextWrapper>
+      </MemoryRouter>,
+    );
+    typeMnemonic(ABANDON);
+    expect(await screen.findByText("configure exit page")).toBeInTheDocument();
   });
 
   it("shows other backend errors verbatim", async () => {
