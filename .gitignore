@@ -2,15 +2,13 @@
 .venv/
 node_modules/
 dist/
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
 
-# For pyinstaller
-build/
-src/scripts/__pycache__/
-src/vendors/*.pyc
+
+# Rust / Tauri / Vite
+/target/
+/crates/*/target/
+/src-tauri/target/
+/src-tauri/gen/schemas/
+
+# Personal working notes, not for the repo
+TODO.md

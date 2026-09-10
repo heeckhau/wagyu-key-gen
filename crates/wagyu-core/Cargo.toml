@@ -1,0 +1,40 @@
+[package]
+name = "wagyu-core"
+description = "Validator key generation core for Wagyu Key Gen (BLS keys, EIP-2335 keystores, deposit data, BLS-to-execution changes)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+# Lighthouse crypto crates (not published on crates.io). All cryptography comes from here.
+bls = { git = "https://github.com/sigp/lighthouse", tag = "v8.2.2" }
+eth2_keystore = { git = "https://github.com/sigp/lighthouse", tag = "v8.2.2" }
+eth2_key_derivation = { git = "https://github.com/sigp/lighthouse", tag = "v8.2.2" }
+eth2_wallet = { git = "https://github.com/sigp/lighthouse", tag = "v8.2.2" }
+
+# BIP-39 with all 10 official word lists (eth2_wallet's tiny-bip39 lacks Czech and Portuguese).
+bip39 = { version = "2.2", features = ["all-languages"] }
+
+# SSZ / Merkleization. Versions must match what Lighthouse v8.2.2 pins.
+tree_hash = "0.12"
+tree_hash_derive = "0.12"
+alloy-primitives = { version = "1", default-features = false, features = ["std"] }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+rand = "0.9"
+zeroize = { version = "1", features = ["zeroize_derive"] }
+thiserror = "2"
+rayon = "1"
+unicode-normalization = "0.1"
+tempfile = "3"
+
+[features]
+# x86_64 release builds: avoid ADX-only code paths in blst so older CPUs do not crash.
+portable = ["bls/supranational-portable"]
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["arbitrary_precision"] }
