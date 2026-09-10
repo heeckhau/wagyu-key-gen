@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Declares the Common Controls v6 dependency that Tauri's `common-controls-v6` feature (on by
+  default) needs. Normally tauri-build embeds this automatically, but only into the app's own
+  binary, never into test binaries; build.rs embeds it manually into every compiled artifact
+  instead. See the comment in build.rs and https://github.com/tauri-apps/tauri/issues/13419.
+-->
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*"
+      />
+    </dependentAssembly>
+  </dependency>
+</assembly>
