@@ -7,7 +7,7 @@ import { BTECContext } from "../BTECContext";
 import FolderSelector from "../components/FolderSelector";
 import Loader from "../components/Loader";
 import WizardWrapper from "../components/WizardWrapper";
-import { BTECFlow, paths } from "../constants";
+import { BTECFlow, BTECKeystoreFlow, paths } from "../constants";
 import { GlobalContext } from "../GlobalContext";
 
 /**
@@ -18,22 +18,27 @@ import { GlobalContext } from "../GlobalContext";
 const CreateCredentialsChange = () => {
   const { network } = useContext(GlobalContext);
   const {
+    source,
     btecCredentials,
     btecIndices,
     setFolderLocation,
     index,
     mnemonic,
     withdrawalAddress,
+    keystorePath,
+    keystorePassword,
+    validatorIndex,
   } = useContext(BTECContext);
   const history = useHistory();
+  const usingKeystore = source === "keystore";
 
   const [creatingCredentialsChange, setCreatingCredentialsChange] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("");
 
   useEffect(() => {
-    if (!mnemonic) {
-      history.replace(paths.BTEC_IMPORT);
+    if (usingKeystore ? !keystorePath : !mnemonic) {
+      history.replace(usingKeystore ? paths.CONFIGURE_BTEC_KEYSTORE : paths.BTEC_IMPORT);
     }
   }, []);
 
@@ -53,15 +58,26 @@ const CreateCredentialsChange = () => {
       appendedWithdrawalAddress = "0x" + withdrawalAddress;
     }
 
-    eth2Deposit.generateBLSChange(
-      selectedFolder,
-      network,
-      mnemonic,
-      index,
-      btecIndices,
-      btecCredentials,
-      appendedWithdrawalAddress,
-    ).then(() => {
+    const generation = usingKeystore
+      ? eth2Deposit.generateBLSChangeKeystore(
+          selectedFolder,
+          network,
+          keystorePath,
+          keystorePassword,
+          validatorIndex,
+          appendedWithdrawalAddress,
+        )
+      : eth2Deposit.generateBLSChange(
+          selectedFolder,
+          network,
+          mnemonic,
+          index,
+          btecIndices,
+          btecCredentials,
+          appendedWithdrawalAddress,
+        );
+
+    generation.then(() => {
       setFolderLocation(selectedFolder);
       history.push(paths.FINISH_CREDENTIALS);
     }).catch((error) => {
@@ -88,8 +104,8 @@ const CreateCredentialsChange = () => {
         <Button variant="contained" color="primary" onClick={() => onBackClick()} tabIndex={3}>Back</Button>,
         <Button variant="contained" color="primary" disabled={!selectedFolder} onClick={() => onNextClick()} tabIndex={2}>Create</Button>,
       ]}
-      activeTimelineIndex={2}
-      timelineItems={BTECFlow}
+      activeTimelineIndex={usingKeystore ? 1 : 2}
+      timelineItems={usingKeystore ? BTECKeystoreFlow : BTECFlow}
       title="Generate BLS to execution change"
     >
       { creatingCredentialsChange ? (

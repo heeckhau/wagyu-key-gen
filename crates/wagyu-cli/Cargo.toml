@@ -1,0 +1,26 @@
+[package]
+name = "wagyu-cli"
+description = "Command-line interface of Wagyu Key Gen, mirroring ethstaker-deposit-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "wagyu-cli"
+path = "src/main.rs"
+
+[dependencies]
+wagyu-core = { path = "../wagyu-core" }
+clap = { version = "4", features = ["derive", "wrap_help"] }
+rpassword = "7"
+zeroize = "1"
+
+[dev-dependencies]
+serde_json = "1"
+tempfile = "3"
+
+[features]
+# x86_64 release builds: avoid ADX-only code paths in blst so older CPUs do not crash.
+portable = ["wagyu-core/portable"]

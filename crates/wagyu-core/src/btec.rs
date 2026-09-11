@@ -6,15 +6,18 @@ use std::path::{Path, PathBuf};
 use alloy_primitives::Address;
 use bls::{Hash256, PublicKeyBytes, SignatureBytes};
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
 use crate::chain::{ChainSetting, Network};
 use crate::credential::{BtecEntry, Credential};
 use crate::error::{Error, Result};
 use crate::fs::{ensure_directory, unix_timestamp, write_sensitive_json};
+use crate::keystore::decrypt_keystore_file;
 use crate::mnemonic::{parse_mnemonic, Language};
 use crate::spec::{
-    compute_bls_to_execution_change_domain, compute_signing_root, BlsToExecutionChange,
+    compute_bls_to_execution_change_domain, compute_bls_to_execution_change_keystore_domain,
+    compute_signing_root, BlsToExecutionChange, BlsToExecutionChangeKeystore,
 };
 use crate::validation::parse_address;
 
@@ -185,6 +188,111 @@ pub fn validate_bls_to_execution_change(
         compute_bls_to_execution_change_domain(chain.genesis_fork_version, genesis_validators_root);
     let signing_root = compute_signing_root(&message, domain);
     match (from_bls_pubkey.decompress(), signature.decompress()) {
+        (Ok(pk), Ok(sig)) => sig.verify(&pk, signing_root),
+        _ => false,
+    }
+}
+
+/// JSON layout of a `bls_to_execution_change_keystore_signature-*.json` file. Unlike the
+/// mnemonic variant the validator index is a JSON number and there is no metadata block.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BtecKeystoreSignature {
+    pub message: BtecKeystoreMessage,
+    pub signature: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BtecKeystoreMessage {
+    pub to_execution_address: String,
+    pub validator_index: u64,
+}
+
+pub struct GenerateBtecKeystoreRequest {
+    pub folder: PathBuf,
+    pub network: Network,
+    pub keystore_path: PathBuf,
+    pub keystore_password: Zeroizing<String>,
+    pub validator_index: u64,
+    pub withdrawal_address: String,
+}
+
+/// `bls_to_execution_change_keystore_generation` from the Python code: a BLS-to-execution
+/// change signed with the validator's *signing* key (from a keystore) under the deposit-cli's
+/// own `0x0F` domain. Writes `bls_to_execution_change_keystore_signature-<index>-<timestamp>.json`,
+/// re-reads it for verification and returns the file path.
+pub fn generate_bls_to_execution_change_keystore(
+    req: &GenerateBtecKeystoreRequest,
+) -> Result<PathBuf> {
+    let withdrawal_address = parse_address(&req.withdrawal_address)?;
+    let chain = req.network.setting();
+    let genesis_validators_root = chain
+        .genesis_validators_root
+        .ok_or(Error::MissingGenesisValidatorsRoot)?;
+    let keypair = decrypt_keystore_file(&req.keystore_path, req.keystore_password.as_bytes())?;
+
+    let message = BlsToExecutionChangeKeystore {
+        validator_index: req.validator_index,
+        to_execution_address: withdrawal_address,
+    };
+    let domain = compute_bls_to_execution_change_keystore_domain(
+        chain.genesis_fork_version,
+        genesis_validators_root,
+    );
+    let signing_root = compute_signing_root(&message, domain);
+    let signature = SignatureBytes::from(keypair.sk.sign(signing_root));
+    let entry = BtecKeystoreSignature {
+        message: BtecKeystoreMessage {
+            to_execution_address: format!("0x{}", hex::encode(withdrawal_address)),
+            validator_index: req.validator_index,
+        },
+        signature: format!("0x{}", hex::encode(signature.serialize())),
+    };
+
+    ensure_directory(&req.folder)?;
+    let path = req.folder.join(format!(
+        "bls_to_execution_change_keystore_signature-{}-{}.json",
+        req.validator_index,
+        unix_timestamp()
+    ));
+    write_sensitive_json(&path, &entry)?;
+
+    let file = std::fs::File::open(&path).map_err(|e| Error::io("cannot open file", &path, e))?;
+    let written: BtecKeystoreSignature = serde_json::from_reader(file)?;
+    if !validate_bls_to_execution_change_keystore(&written, keypair.pk.compress(), chain) {
+        return Err(Error::BtecVerification);
+    }
+    Ok(path)
+}
+
+/// `validate_bls_to_execution_change_keystore` from the Python code.
+pub fn validate_bls_to_execution_change_keystore(
+    entry: &BtecKeystoreSignature,
+    pubkey: PublicKeyBytes,
+    chain: &ChainSetting,
+) -> bool {
+    let Some(to_execution_address) =
+        decode_hex(&entry.message.to_execution_address).filter(|b| b.len() == 20)
+    else {
+        return false;
+    };
+    let Some(signature) =
+        decode_hex(&entry.signature).and_then(|b| SignatureBytes::deserialize(&b).ok())
+    else {
+        return false;
+    };
+    let Some(genesis_validators_root) = chain.genesis_validators_root else {
+        return false;
+    };
+    let message = BlsToExecutionChangeKeystore {
+        validator_index: entry.message.validator_index,
+        to_execution_address: Address::from_slice(&to_execution_address),
+    };
+    let domain = compute_bls_to_execution_change_keystore_domain(
+        chain.genesis_fork_version,
+        genesis_validators_root,
+    );
+    let signing_root = compute_signing_root(&message, domain);
+    match (pubkey.decompress(), signature.decompress()) {
         (Ok(pk), Ok(sig)) => sig.verify(&pk, signing_root),
         _ => false,
     }

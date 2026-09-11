@@ -1,0 +1,8 @@
+{
+  "command": "exit_transaction_mnemonic",
+  "network": "hoodi",
+  "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  "index": 3,
+  "indices": "42",
+  "epoch": 0
+}

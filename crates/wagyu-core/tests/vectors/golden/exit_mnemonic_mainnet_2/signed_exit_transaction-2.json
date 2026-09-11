@@ -1,0 +1,7 @@
+{
+  "message": {
+    "epoch": "1234",
+    "validator_index": "2"
+  },
+  "signature": "0xb8221eb434121809a2ae1f42166f590fdc0325ad34958b06a2610fb1e0091f35a80e01fc3abc608fccb039fb342e7b56156d4e44ca777c150cdd6c82572b5f639155009cef8c2eb5f44a151811fa8e9e9890c2ca7e9cd49f9664b538aca98d16"
+}

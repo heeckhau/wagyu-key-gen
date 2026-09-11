@@ -96,6 +96,59 @@ describe("Tauri bridge", () => {
     expect(calls[7].args).toEqual({ directory: "/out", startsWith: "keystore" });
   });
 
+  it("sends the keystore-based commands as one request object each", async () => {
+    const calls = record({
+      generate_exit_transactions: ["/out/signed_exit_transaction-1-1.json"],
+      generate_exit_transaction_keystore: "/out/signed_exit_transaction-7-1.json",
+      generate_partial_deposit: "/out/deposit_data-1.json",
+      generate_bls_change_keystore: "/out/bls_to_execution_change_keystore_signature-1-1.json",
+      keystore_pubkey: "b3e4",
+    });
+
+    await expect(eth2Deposit.generateExitTransactions("/out", "Mainnet", "m", 0, "1", 1234)).resolves.toEqual([
+      "/out/signed_exit_transaction-1-1.json",
+    ]);
+    await expect(
+      eth2Deposit.generateExitTransactionKeystore("/out", "Hoodi", "/k.json", "MyPasswordIs", 7, 0),
+    ).resolves.toBe("/out/signed_exit_transaction-7-1.json");
+    await expect(
+      eth2Deposit.generatePartialDeposit("/out", "Gnosis", "/k.json", "MyPasswordIs", "1.5", "0x34", true),
+    ).resolves.toBe("/out/deposit_data-1.json");
+    await expect(
+      eth2Deposit.generateBLSChangeKeystore("/out", "Mainnet", "/k.json", "MyPasswordIs", 1, "0x34"),
+    ).resolves.toBe("/out/bls_to_execution_change_keystore_signature-1-1.json");
+    await expect(eth2Deposit.keystorePubkey("/k.json")).resolves.toBe("b3e4");
+
+    expect(calls).toEqual([
+      {
+        cmd: "generate_exit_transactions",
+        args: { request: { folder: "/out", chain: "Mainnet", mnemonic: "m", index: 0, indices: "1", epoch: 1234 } },
+      },
+      {
+        cmd: "generate_exit_transaction_keystore",
+        args: {
+          request: { folder: "/out", chain: "Hoodi", keystore: "/k.json", keystorePassword: "MyPasswordIs", validatorIndex: 7, epoch: 0 },
+        },
+      },
+      {
+        cmd: "generate_partial_deposit",
+        args: {
+          request: {
+            folder: "/out", chain: "Gnosis", keystore: "/k.json", keystorePassword: "MyPasswordIs",
+            amount: "1.5", withdrawalAddress: "0x34", compounding: true,
+          },
+        },
+      },
+      {
+        cmd: "generate_bls_change_keystore",
+        args: {
+          request: { folder: "/out", chain: "Mainnet", keystore: "/k.json", keystorePassword: "MyPasswordIs", validatorIndex: 1, withdrawalAddress: "0x34" },
+        },
+      },
+      { cmd: "keystore_pubkey", args: { path: "/k.json" } },
+    ]);
+  });
+
   it("rejects with the backend error text so the pages can show it", async () => {
     const message = "That is not a valid mnemonic, please check for typos.";
     mockIPC(() => {

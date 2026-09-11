@@ -5,10 +5,14 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
-use wagyu_core::btec::{GenerateBtecRequest, ValidateBlsCredentialsRequest};
+use wagyu_core::btec::{
+    GenerateBtecKeystoreRequest, GenerateBtecRequest, ValidateBlsCredentialsRequest,
+};
 use wagyu_core::deposit::{GenerateKeysOutput, GenerateKeysRequest};
+use wagyu_core::exit::{GenerateExitFromKeystoreRequest, GenerateExitFromMnemonicRequest};
 use wagyu_core::keystore::KdfChoice;
 use wagyu_core::mnemonic::{language_from_name, Language};
+use wagyu_core::partial_deposit::PartialDepositRequest;
 use wagyu_core::validation::{
     deposit_amount_to_gwei, parse_bls_withdrawal_credentials_list, parse_validator_indices,
 };
@@ -162,6 +166,155 @@ pub async fn generate_bls_change(
         .map(|p| p.to_string_lossy().into_owned())
     })
     .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExitTransactionsArgs {
+    pub folder: String,
+    pub chain: String,
+    pub mnemonic: String,
+    /// EIP-2334 index of the first validator.
+    pub index: u32,
+    /// Comma separated beacon-chain validator indices.
+    pub indices: String,
+    #[serde(default)]
+    pub epoch: u64,
+    #[serde(default)]
+    pub mnemonic_language: Option<String>,
+}
+
+/// Writes one signed exit per validator and returns the file paths.
+#[tauri::command]
+pub async fn generate_exit_transactions(
+    request: ExitTransactionsArgs,
+) -> Result<Vec<String>, String> {
+    let mnemonic_language = language(request.mnemonic_language.clone())?;
+    let network = Network::from_name(&request.chain).map_err(text)?;
+    let validator_indices = parse_validator_indices(&request.indices).map_err(text)?;
+    blocking(move || {
+        wagyu_core::generate_exit_transactions(&GenerateExitFromMnemonicRequest {
+            folder: PathBuf::from(request.folder),
+            network,
+            mnemonic: request.mnemonic.into(),
+            mnemonic_password: String::new().into(),
+            mnemonic_language,
+            start_index: request.index,
+            validator_indices,
+            epoch: request.epoch,
+        })
+        .map(|paths| {
+            paths
+                .into_iter()
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect()
+        })
+    })
+    .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExitTransactionKeystoreArgs {
+    pub folder: String,
+    pub chain: String,
+    pub keystore: String,
+    pub keystore_password: String,
+    pub validator_index: u64,
+    #[serde(default)]
+    pub epoch: u64,
+}
+
+/// Signs an exit with a keystore file and returns the path of the written file.
+#[tauri::command]
+pub async fn generate_exit_transaction_keystore(
+    request: ExitTransactionKeystoreArgs,
+) -> Result<String, String> {
+    let network = Network::from_name(&request.chain).map_err(text)?;
+    blocking(move || {
+        wagyu_core::generate_exit_transaction_from_keystore(&GenerateExitFromKeystoreRequest {
+            folder: PathBuf::from(request.folder),
+            network,
+            keystore_path: PathBuf::from(request.keystore),
+            keystore_password: request.keystore_password.into(),
+            validator_index: request.validator_index,
+            epoch: request.epoch,
+        })
+        .map(|p| p.to_string_lossy().into_owned())
+    })
+    .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PartialDepositArgs {
+    pub folder: String,
+    pub chain: String,
+    pub keystore: String,
+    pub keystore_password: String,
+    /// Deposit as typed by the user, in ETH (or GNO), e.g. `"32"` or `"1.5"`.
+    pub amount: String,
+    pub withdrawal_address: String,
+    #[serde(default)]
+    pub compounding: bool,
+}
+
+/// Writes a single-entry deposit data file for topping up an existing validator and returns
+/// its path.
+#[tauri::command]
+pub async fn generate_partial_deposit(request: PartialDepositArgs) -> Result<String, String> {
+    let network = Network::from_name(&request.chain).map_err(text)?;
+    let amount_gwei = deposit_amount_to_gwei(&request.amount, network.setting()).map_err(text)?;
+    blocking(move || {
+        wagyu_core::generate_partial_deposit(&PartialDepositRequest {
+            folder: PathBuf::from(request.folder),
+            network,
+            keystore_path: PathBuf::from(request.keystore),
+            keystore_password: request.keystore_password.into(),
+            amount_gwei,
+            withdrawal_address: request.withdrawal_address,
+            compounding: request.compounding,
+        })
+        .map(|p| p.to_string_lossy().into_owned())
+    })
+    .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlsChangeKeystoreArgs {
+    pub folder: String,
+    pub chain: String,
+    pub keystore: String,
+    pub keystore_password: String,
+    pub validator_index: u64,
+    pub withdrawal_address: String,
+}
+
+/// Writes a BLS-to-execution change signed with a keystore and returns the file path.
+#[tauri::command]
+pub async fn generate_bls_change_keystore(
+    request: BlsChangeKeystoreArgs,
+) -> Result<String, String> {
+    let network = Network::from_name(&request.chain).map_err(text)?;
+    blocking(move || {
+        wagyu_core::generate_bls_to_execution_change_keystore(&GenerateBtecKeystoreRequest {
+            folder: PathBuf::from(request.folder),
+            network,
+            keystore_path: PathBuf::from(request.keystore),
+            keystore_password: request.keystore_password.into(),
+            validator_index: request.validator_index,
+            withdrawal_address: request.withdrawal_address,
+        })
+        .map(|p| p.to_string_lossy().into_owned())
+    })
+    .await
+}
+
+/// The hex public key in a keystore file, so the UI can confirm which validator it belongs to.
+#[tauri::command]
+pub fn keystore_pubkey(path: String) -> Result<String, String> {
+    wagyu_core::keystore::keystore_file_pubkey(Path::new(&path)).map_err(text)
 }
 
 #[tauri::command]

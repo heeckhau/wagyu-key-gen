@@ -6,7 +6,13 @@ export enum StepKey {
   Finish,
   BTECConfiguration,
   BTECGeneration,
-  FinishBTEC
+  FinishBTEC,
+  ExitConfiguration,
+  ExitGeneration,
+  FinishExit,
+  PartialDepositConfiguration,
+  PartialDepositGeneration,
+  FinishPartialDeposit,
 }
 
 export enum StepSequenceKey {
@@ -17,8 +23,19 @@ export enum StepSequenceKey {
 
 export enum ReuseMnemonicAction {
   RegenerateKeys,
-  GenerateBLSToExecutionChange
+  GenerateBLSToExecutionChange,
+  GenerateExitTransaction,
 }
+
+/** What the user wants to do with an existing keystore file. */
+export enum KeystoreAction {
+  GenerateExitTransaction,
+  GeneratePartialDeposit,
+  GenerateBLSToExecutionChange,
+}
+
+/** Whether a keystore-capable flow was started from a mnemonic or from a keystore file. */
+export type KeySource = "mnemonic" | "keystore";
 
 export enum Network {
   MAINNET = "Mainnet",

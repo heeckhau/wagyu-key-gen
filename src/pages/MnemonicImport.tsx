@@ -9,26 +9,30 @@ import WizardWrapper from "../components/WizardWrapper";
 import {
   BTECFlow,
   ExistingMnemonicFlow,
+  ExitMnemonicFlow,
   MNEMONIC_ERROR_SEARCH,
   VALID_MNEMONIC_LENGTHS,
   errors,
   paths,
 } from "../constants";
+import { ExitContext } from "../ExitContext";
 import { cleanMnemonic } from "../helpers";
 import { KeyCreationContext } from "../KeyCreationContext";
 
 /**
  * Allows the user to import an existing mnemonic to kickstart either the
- * validator key creation or withdrawal credentials change flow
+ * validator key creation, the withdrawal credentials change or the exit flow
  */
 const MnemonicImport = () => {
   const {mnemonic: btecMnemonic, setMnemonic: setBTECMnemonic} = useContext(BTECContext);
+  const {mnemonic: exitMnemonic, setMnemonic: setExitMnemonic} = useContext(ExitContext);
   const {mnemonic, setMnemonic} = useContext(KeyCreationContext);
   const history = useHistory();
   const usingBTEC = history.location.pathname === paths.BTEC_IMPORT;
+  const usingExit = history.location.pathname === paths.EXIT_IMPORT;
 
   const [error, setError] = useState("");
-  const [inputMnemonic, setInputMnemonic] = useState(usingBTEC ? btecMnemonic : mnemonic);
+  const [inputMnemonic, setInputMnemonic] = useState(usingBTEC ? btecMnemonic : usingExit ? exitMnemonic : mnemonic);
   const [validatingMnemonic, setValidatingMnemonic] = useState(false);
 
   /**
@@ -50,11 +54,13 @@ const MnemonicImport = () => {
         // The backend expands abbreviated words, so keep the full-word mnemonic.
         if (usingBTEC) {
           setBTECMnemonic(validatedMnemonic);
+        } else if (usingExit) {
+          setExitMnemonic(validatedMnemonic);
         } else {
           setMnemonic(validatedMnemonic);
         }
         setValidatingMnemonic(false);
-        history.push(usingBTEC ? paths.CONFIGURE_BTEC : paths.CONFIGURE_EXISTING);
+        history.push(usingBTEC ? paths.CONFIGURE_BTEC : usingExit ? paths.CONFIGURE_EXIT : paths.CONFIGURE_EXISTING);
       }).catch((error) => {
         const errorMsg = String(error);
 
@@ -90,7 +96,7 @@ const MnemonicImport = () => {
         <Button variant="contained" color="primary" disabled={validatingMnemonic || !inputMnemonic} onClick={() => onNextClick()} tabIndex={2}>Import</Button>,
       ]}
       activeTimelineIndex={0}
-      timelineItems={usingBTEC ? BTECFlow : ExistingMnemonicFlow}
+      timelineItems={usingBTEC ? BTECFlow : usingExit ? ExitMnemonicFlow : ExistingMnemonicFlow}
       title="Import Secret Recovery Phrase"
     >
       <div className="tw-px-20">
@@ -120,4 +126,3 @@ const MnemonicImport = () => {
 };
 
 export default MnemonicImport;
-

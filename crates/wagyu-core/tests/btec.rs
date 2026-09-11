@@ -8,8 +8,9 @@ use std::path::Path;
 use common::{assert_mode_0400, golden_cases, read_json, SISTER};
 use serde_json::Value;
 use wagyu_core::btec::{
-    generate_bls_to_execution_change, validate_bls_credentials, GenerateBtecRequest,
-    ValidateBlsCredentialsRequest,
+    generate_bls_to_execution_change, generate_bls_to_execution_change_keystore,
+    validate_bls_credentials, BtecKeystoreSignature, GenerateBtecKeystoreRequest,
+    GenerateBtecRequest, ValidateBlsCredentialsRequest,
 };
 use wagyu_core::chain::Network;
 use wagyu_core::credential::BtecEntry;
@@ -131,6 +132,83 @@ fn test_errors() {
         0,
         "no files written on error"
     );
+}
+
+const MAINNET_KEYSTORE: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/vectors/golden/keys_mainnet_bls_3/keystore-0.json"
+);
+
+fn keystore_request(folder: &Path) -> GenerateBtecKeystoreRequest {
+    GenerateBtecKeystoreRequest {
+        folder: folder.to_path_buf(),
+        network: Network::Mainnet,
+        keystore_path: MAINNET_KEYSTORE.into(),
+        keystore_password: "MyPasswordIs".to_string().into(),
+        validator_index: 1,
+        withdrawal_address: ADDRESS.to_string(),
+    }
+}
+
+#[test]
+fn test_bls_to_execution_change_keystore() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = generate_bls_to_execution_change_keystore(&keystore_request(dir.path())).unwrap();
+    assert!(path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .starts_with("bls_to_execution_change_keystore_signature-1-"));
+    assert_mode_0400(&path);
+    let entry: BtecKeystoreSignature =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(entry.message.validator_index, 1);
+    assert_eq!(entry.message.to_execution_address, ADDRESS);
+    assert!(entry.signature.starts_with("0x") && entry.signature.len() == 2 + 192);
+
+    let mut wrong_password = keystore_request(dir.path());
+    wrong_password.keystore_password = "nope nope nope".to_string().into();
+    assert!(matches!(
+        generate_bls_to_execution_change_keystore(&wrong_password),
+        Err(Error::WrongKeystorePassword)
+    ));
+    let mut bad_address = keystore_request(dir.path());
+    bad_address.withdrawal_address = "0x3434".to_string();
+    assert!(matches!(
+        generate_bls_to_execution_change_keystore(&bad_address),
+        Err(Error::InvalidAddress)
+    ));
+    let mut ephemery = keystore_request(dir.path());
+    ephemery.network = Network::Ephemery;
+    assert!(matches!(
+        generate_bls_to_execution_change_keystore(&ephemery),
+        Err(Error::MissingGenesisValidatorsRoot)
+    ));
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+}
+
+#[test]
+fn golden_parity_keystore() {
+    for case in golden_cases("bls_change_keystore") {
+        let name = case.file_name().unwrap().to_str().unwrap().to_string();
+        let params = read_json(&case.join("params.json"));
+        let dir = tempfile::tempdir().unwrap();
+        let req = GenerateBtecKeystoreRequest {
+            folder: dir.path().to_path_buf(),
+            network: Network::from_name(params["network"].as_str().unwrap()).unwrap(),
+            keystore_path: case.join(params["keystore"].as_str().unwrap()),
+            keystore_password: params["password"].as_str().unwrap().to_string().into(),
+            validator_index: params["validator_index"].as_u64().unwrap(),
+            withdrawal_address: params["withdrawal_address"].as_str().unwrap().to_string(),
+        };
+        let path = generate_bls_to_execution_change_keystore(&req)
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+        let expected: Value =
+            read_json(&case.join("bls_to_execution_change_keystore_signature.json"));
+        let actual: Value = read_json(&path);
+        assert_eq!(actual, expected, "{name}: signature file differs");
+    }
 }
 
 /// The BLS signature is deterministic, so the file must be identical to the Python output.

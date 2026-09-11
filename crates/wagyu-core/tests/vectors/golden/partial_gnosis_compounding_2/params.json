@@ -1,0 +1,9 @@
+{
+  "command": "partial_deposit",
+  "network": "gnosis",
+  "keystore": "keystore.json",
+  "password": "MyPasswordIs",
+  "amount_gwei": 64000000000,
+  "withdrawal_address": "0x3434343434343434343434343434343434343434",
+  "compounding": true
+}

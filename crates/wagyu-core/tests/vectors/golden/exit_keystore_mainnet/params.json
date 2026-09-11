@@ -1,0 +1,8 @@
+{
+  "command": "exit_transaction_keystore",
+  "network": "mainnet",
+  "keystore": "keystore.json",
+  "password": "MyPasswordIs",
+  "validator_index": 1,
+  "epoch": 1234
+}

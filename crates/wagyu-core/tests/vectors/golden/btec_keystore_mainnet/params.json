@@ -1,0 +1,8 @@
+{
+  "command": "bls_change_keystore",
+  "network": "mainnet",
+  "keystore": "keystore.json",
+  "password": "MyPasswordIs",
+  "validator_index": 1,
+  "withdrawal_address": "0x3434343434343434343434343434343434343434"
+}

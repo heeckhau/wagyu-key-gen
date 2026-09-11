@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/wagyu-core", "src-tauri"]
+members = ["crates/wagyu-core", "crates/wagyu-cli", "src-tauri"]
 
 [workspace.package]
 version = "2.0.0"
